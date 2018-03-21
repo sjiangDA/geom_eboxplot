@@ -493,9 +493,15 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
                         outlier.alpha = NULL, 
                         font.size = 3.88, font.angle=0, digits=0,
                         varwidth = FALSE, shade.fill="pink", shade.alpha=1,
-                        shade.upper=NA,
+                        shade.upper=NA, shade.lower=NA,
                         print.median=TRUE
                         ) {
+
+    if (is.na(shade.lower) & is.na(shade.upper)) {
+      shade.draw = FALSE
+    } else {
+      shade.draw =TRUE
+    }
 
     common <- data.frame(
       colour = data$colour,
@@ -514,17 +520,25 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
       common,
       stringsAsFactors = FALSE
       )
+    polygon_glob <- GeomPolygon$draw_panel(polygon, panel_params, coord)
+    polygon$fill = alpha(data$colour, 0)
+    polygon_redraw_glob <- GeomPolygon$draw_panel(polygon, panel_params, coord)
+
 
     ttx_s <- data$ttx_s[[1]]
-    polygon_s <- data.frame(x = c(data$x - ttx_s*width/2, data$x + ttx_s[order(-data$id_s[[1]])]*width/2),
-      y = c(data$tt_s[[1]], data$tt_s[[1]][order(-data$id_s[[1]])]),
-      alpha = data$alpha,
-      common,
-      stringsAsFactors = FALSE
-      )
-    polygon_s$fill = alpha(shade.fill, shade.alpha)
-    polygon_s$colour = alpha(data$colour, 0)
-
+    if (shade.draw==TRUE){
+      polygon_s <- data.frame(x = c(data$x - ttx_s*width/2, data$x + ttx_s[order(-data$id_s[[1]])]*width/2),
+        y = c(data$tt_s[[1]], data$tt_s[[1]][order(-data$id_s[[1]])]),
+        alpha = data$alpha,
+        common,
+        stringsAsFactors = FALSE
+        )
+      polygon_s$fill = alpha(shade.fill, shade.alpha)
+      polygon_s$colour = alpha(data$colour, 0)
+      shade_glob <- GeomPolygon$draw_panel(polygon_s, panel_params, coord)
+    } else {
+      shade_glob <- NULL
+    }
 
     segments <- data.frame(
         x = data$x-ttx*width/2,
@@ -581,14 +595,15 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
     } else {
       outliers_grob <- NULL
     }
-
     ggname("geom_eboxplot", grobTree(
       outliers_grob,
-      GeomPolygon$draw_panel(polygon, panel_params, coord),
-      GeomPolygon$draw_panel(polygon_s, panel_params, coord),
+      polygon_glob,
+      shade_glob,
+      polygon_redraw_glob,
       GeomSegment$draw_panel(segments, panel_params, coord),
       median_glob
     ))
+
   },
 
   draw_key = draw_key_eboxplot,
