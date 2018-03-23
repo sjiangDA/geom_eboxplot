@@ -402,15 +402,21 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
                          outlier.size = 1.5,
                          outlier.stroke = 0.5,
                          outlier.alpha = NULL,
-                         font.size = 3.88,
-                         font.angle = 0,
-                         digits=0,
+                         median.show=TRUE,
+                         median.font.size = 3.88,
+                         median.font.angle = 0,
+                         median.digits=0,
+                         percent.show.group=NULL,
+                         percent.show.side=1,
+                         percent.font.size=3.88,
+                         percent.font.angle=0,
+                         percent.side.offset=0.1,
+                         percent.font.color="black",
                          varwidth = FALSE,
                          shade.upper = NA,
                          shade.lower = NA,
                          shade.fill = "pink",
                          shade.alpha= 1,
-                         print.median=TRUE,
                          shade.value.absolute = FALSE,
                          na.rm = FALSE,
                          show.legend = NA,
@@ -440,9 +446,16 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
       outlier.size = outlier.size,
       outlier.stroke = outlier.stroke,
       outlier.alpha = outlier.alpha,
-      font.size = font.size,
-      font.angle=font.angle,
-      digits=digits,
+      median.show=median.show,
+      median.font.size = median.font.size,
+      median.font.angle=median.font.angle,
+      median.digits=median.digits,
+      percent.show.group=percent.show.group,
+      percent.show.side=percent.show.side,
+      percent.font.size=percent.font.size,
+      percent.font.angle=percent.font.angle,
+      percent.font.color=percent.font.color,
+      percent.side.offset=percent.side.offset,
       varwidth = varwidth,
       na.rm = na.rm,
       shade.upper=shade.upper,
@@ -450,7 +463,6 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
       shade.fill=shade.fill,
       shade.alpha=shade.alpha,
       shade.value.absolute=shade.value.absolute,
-      print.median=print.median,
       ...
     )
   )
@@ -487,14 +499,27 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
 
   draw_group = function(data, panel_params, coord, fatten = 2,
                         outlier.show = TRUE,
-                        outlier.colour = NULL, outlier.fill = NULL,
+                        outlier.colour = NULL, 
+                        outlier.fill = NULL,
                         outlier.shape = 19,
-                        outlier.size = 1.5, outlier.stroke = 0.5,
+                        outlier.size = 1.5, 
+                        outlier.stroke = 0.5,
                         outlier.alpha = NULL, 
-                        font.size = 3.88, font.angle=0, digits=0,
-                        varwidth = FALSE, shade.fill="pink", shade.alpha=1,
-                        shade.upper=NA, shade.lower=NA,
-                        print.median=TRUE
+                        median.show=TRUE,
+                        median.font.size = 3.88, 
+                        median.font.angle=0, 
+                        median.digits=0,
+                        percent.show.group=NULL,
+                        percent.show.side=1,
+                        percent.font.size=3.88,
+                        percent.font.angle=0,
+                        percent.font.color="black",
+                        percent.side.offset=0.1,
+                        varwidth = FALSE, 
+                        shade.fill="pink", 
+                        shade.alpha=1,
+                        shade.upper=NA, 
+                        shade.lower=NA
                         ) {
 
     if (is.na(shade.lower) & is.na(shade.upper)) {
@@ -517,6 +542,8 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
     polygon <- data.frame(x = c(data$x - ttx*width/2, data$x + ttx[order(-data$id[[1]])]*width/2),
       y = c(data$tt[[1]], data$tt[[1]][order(-data$id[[1]])]),
       alpha = data$alpha,
+      side = c(rep(1,9),rep(2,9)),
+      id = c(1:9, 9:1),
       common,
       stringsAsFactors = FALSE
       )
@@ -524,6 +551,23 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
     polygon$fill = alpha(data$colour, 0)
     polygon_redraw_glob <- GeomPolygon$draw_panel(polygon, panel_params, coord)
 
+    if (is.null(percent.show.group)){
+      percent_glob = NULL
+    } else {
+      group = polygon$group[1]
+      if (group %in% percent.show.group){
+        percent_side = subset(polygon, side == percent.show.side)
+        percent_side$x = percent_side$x + percent.side.offset*(-1)^percent.show.side
+        percent_side$size = percent.font.size
+        percent_side$angle = percent.font.angle
+        percent_side$colour = percent.font.color
+        percent_side$label = c("2.5%","5%","10%","25%","50%","75%","90%","95%","97.5%")
+        percent_side = percent_side[order(data$id[[1]]),]
+        percent_glob = GeomText$draw_panel(percent_side, panel_params, coord)    
+      } else {
+        percent_glob = NULL
+      }
+    }
 
     ttx_s <- data$ttx_s[[1]]
     if (shade.draw==TRUE){
@@ -551,7 +595,7 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
         stringsAsFactors = FALSE
       )
 
-    median_gap_coef = ifelse(print.median, 0.3, 1)
+    median_gap_coef = ifelse(median.show, 0.3, 1)
 
     segments_median <- subset(segments, ttx == 1)
     segments_median_a <- segments_median_b <- segments_median
@@ -563,16 +607,16 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
       segments_median_b
       )
 
-    if (print.median){
+    if (median.show){
       median <- data.frame(
         x = data$x,
         y = data$ymedian,
-        label = sprintf(paste0("%0.", digits, "f"), data$ymedian),
+        label = sprintf(paste0("%0.", median.digits, "f"), data$ymedian),
         colour=data$colour,
         group=data$group,
         alpha = NA,
-        angle=font.angle,
-        size=font.size)
+        angle=median.font.angle,
+        size=median.font.size)
       median_glob <- GeomText$draw_panel(median, panel_params, coord)
     }else{
       median_glob <- NULL
@@ -601,6 +645,7 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
       shade_glob,
       polygon_redraw_glob,
       GeomSegment$draw_panel(segments, panel_params, coord),
+      percent_glob,
       median_glob
     ))
 
