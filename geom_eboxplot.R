@@ -247,7 +247,13 @@ find_x_overlaps <- function(df) {
 }
 
 
-
+.has_groups <- function(data) {
+    # If no group aesthetic is specified, all values of the group column equal to
+    # -1L. On the other hand, if a group aesthetic is specified, all values
+    # are different from -1L (since they are a result of plyr::id()). NA is
+    # returned for 0-row data frames.
+    data$group[1L] != -1L
+}
 
 
 stat_eboxplot <- function(mapping = NULL, data = NULL,
@@ -291,7 +297,7 @@ StatEboxplot <- ggproto("StatEboxplot", Stat,
   setup_params = function(data, params) {
     params$width <- params$width %||% (resolution(data$x) * 0.75)
 
-    if (is.double(data$x) && !has_groups(data) && any(data$x != data$x[1L])) {
+    if (is.double(data$x) && !.has_groups(data) && any(data$x != data$x[1L])) {
       warning(
         "Continuous x aesthetic -- did you forget aes(group=...)?",
         call. = FALSE)
