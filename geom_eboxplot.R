@@ -400,6 +400,7 @@ StatEboxplot <- ggproto("StatEboxplot", Stat,
 geom_eboxplot <- function(mapping = NULL, data = NULL,
                          stat = "eboxplot", position = "dodge2",
                          ...,
+                         median.gap.coef = 1,
                          outlier.show = TRUE,
                          outlier.colour = NULL,
                          outlier.color = NULL,
@@ -408,7 +409,7 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
                          outlier.size = 1.5,
                          outlier.stroke = 0.5,
                          outlier.alpha = NULL,
-                         median.show=TRUE,
+                         median.show=FALSE,
                          median.font.size = 3.88,
                          median.font.angle = 0,
                          median.digits=0,
@@ -417,7 +418,7 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
                          percent.font.size=3.88,
                          percent.font.angle=0,
                          percent.side.offset=0.1,
-                         percent.font.color="black",
+                         percent.font.colour="black",
                          varwidth = FALSE,
                          shade.upper = NA,
                          shade.lower = NA,
@@ -452,6 +453,7 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
       outlier.size = outlier.size,
       outlier.stroke = outlier.stroke,
       outlier.alpha = outlier.alpha,
+      median.gap.coef = median.gap.coef,
       median.show=median.show,
       median.font.size = median.font.size,
       median.font.angle=median.font.angle,
@@ -460,7 +462,7 @@ geom_eboxplot <- function(mapping = NULL, data = NULL,
       percent.show.side=percent.show.side,
       percent.font.size=percent.font.size,
       percent.font.angle=percent.font.angle,
-      percent.font.color=percent.font.color,
+      percent.font.colour=percent.font.colour,
       percent.side.offset=percent.side.offset,
       varwidth = varwidth,
       na.rm = na.rm,
@@ -515,11 +517,12 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
                         median.font.size = 3.88, 
                         median.font.angle=0, 
                         median.digits=0,
+                        median.gap.coef = 1,
                         percent.show.group=NULL,
                         percent.show.side=1,
                         percent.font.size=3.88,
                         percent.font.angle=0,
-                        percent.font.color="black",
+                        percent.font.colour="black",
                         percent.side.offset=0.1,
                         varwidth = FALSE, 
                         shade.fill="pink", 
@@ -566,7 +569,7 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
         percent_side$x = percent_side$x + percent.side.offset*(-1)^percent.show.side
         percent_side$size = percent.font.size
         percent_side$angle = percent.font.angle
-        percent_side$colour = percent.font.color
+        percent_side$colour = percent.font.colour
         percent_side$label = c("2.5%","5%","10%","25%","50%","75%","90%","95%","97.5%")
         percent_side = percent_side[order(data$id[[1]]),]
         percent_glob = GeomText$draw_panel(percent_side, panel_params, coord)    
@@ -601,7 +604,10 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
         stringsAsFactors = FALSE
       )
 
-    median_gap_coef = ifelse(median.show, 0.3, 1)
+    # median_gap_coef = ifelse(median.show, 0.3, 1)
+    median_gap_coef = median.gap.coef/2
+    median_gap_coef = ifelse(median_gap_coef > 1, 1, median_gap_coef)
+    median_gap_coef = ifelse(median_gap_coef < 0, 0, median_gap_coef)
 
     segments_median <- subset(segments, ttx == 1)
     segments_median_a <- segments_median_b <- segments_median
@@ -612,6 +618,7 @@ GeomEboxplot <- ggproto("GeomEboxplot", Geom,
       segments_median_a,
       segments_median_b
       )
+
 
     if (median.show){
       median <- data.frame(
